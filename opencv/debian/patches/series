@@ -7,5 +7,9 @@ support_multiarch
 #revert-Make-ts-always-static
 #fix_path_of_opencl_headers
 #libav10.patch
-optimize_i586.patch
-prefer_python3.5.patch
+#optimize_i586.patch
+support_x32
+# ffmpeg_2.9.patch
+disable_opengl_test_build
+mathjax
+change_jquery.js_path

@@ -7,7 +7,7 @@ DEB_HOST_ARCH_OS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
 
 # for i386 arch
 ifeq ($(DEB_HOST_ARCH),i386)
-BUILDDIR_ARCH = i586-linux-gnu
+BUILDDIR_ARCH = i686-linux-gnu
 else
 BUILDDIR_ARCH = $(DEB_HOST_MULTIARCH)
 endif
@@ -33,6 +33,16 @@ else
 CMAKE_ARCH_FLAGS += -DWITH_1394=OFF -DWITH_V4L=OFF
 endif
 
+# No GL on armhf in Ubuntu
+ifeq ($(shell dpkg-vendor --is ubuntu && echo true),true)
+ifneq ($(DEB_HOST_ARCH),armhf)
+CMAKE_ARCH_FLAGS += -DWITH_OPENGL=ON
+else
+CMAKE_ARCH_FLAGS += -DWITH_OPENGL=OFF
+endif
+CMAKE_ARCH_FLAGS += -DWITH_OPENGL=ON
+endif
+
 # For Java
 export JAVA_HOME=/usr/lib/jvm/default-java
 
@@ -50,8 +60,7 @@ CMAKE_FLAGS = \
 	-DWITH_FFMPEG=ON	\
 	-DWITH_GSTREAMER=OFF	\
 	-DWITH_GTK=ON	\
-	-DWITH_OPENGL=ON	\
-	-DWITH_JASPER=ON	\
+	-DWITH_JASPER=OFF	\
 	-DWITH_JPEG=ON	\
 	-DWITH_PNG=ON	\
 	-DWITH_TIFF=ON	\
@@ -62,15 +71,17 @@ CMAKE_FLAGS = \
 	-DWITH_VTK=ON \
 	-DWITH_GDAL=ON \
 	-DWITH_XINE=OFF	\
+	-DWITH_IPP=OFF \
 	-DBUILD_TESTS=OFF \
 	-DCMAKE_SKIP_RPATH=ON \
 	-DWITH_CUDA=OFF \
+	-DENABLE_PRECOMPILED_HEADERS=OFF \
 	-DWITH_IPP=OFF \
 	-DOPENCL_INCLUDE_DIR:PATH="/usr/include/CL/" \
 	$(CMAKE_ARCH_FLAGS) 
 
 %:
-	dh $@ --buildsystem=cmake --with python2 --with python3 --with javahelper --parallel
+	dh $@ --buildsystem=cmake --with python2 --with javahelper --parallel
 
 override_dh_clean:
 	rm -rf modules/python/src2/hdr_parser.pyc
@@ -80,7 +91,7 @@ override_dh_clean:
 	dh_clean -O--buildsystem=cmake
 	-rm -rf obj-$(BUILDDIR_ARCH)
 	-rm -rf obj-$(BUILDDIR_ARCH)-static
-	-rm -rf modules/python/src2/__pycache__/hdr_parser.cpython-35.pyc
+	-rm -rf modules/python/src2/__pycache__/hdr_parser.cpython-34.pyc
 
 override_dh_auto_configure: configure_dyn configure_static
 configure_dyn:
@@ -103,21 +114,7 @@ build_dyn:
 build_static:
 	dh_auto_build -B obj-$(BUILDDIR_ARCH)-static
 
-override_dh_auto_test: test_dyn test_static
-	
-test_dyn:
-	dh_auto_test -B obj-$(BUILDDIR_ARCH)
-
-test_static:
-	dh_auto_test -B obj-$(BUILDDIR_ARCH)-static
-
-override_dh_auto_install: install_dyn install_static
-
-install_dyn:
-	dh_auto_install -B obj-$(BUILDDIR_ARCH)
-
-install_static:
-	dh_auto_install -B obj-$(BUILDDIR_ARCH)-static
+override_dh_auto_test:
 
 override_dh_install:
 	-rm --verbose -rf debian/tmp/usr/share/opencv/samples/octave
@@ -130,21 +127,13 @@ override_dh_install:
 
 	for f in $$(ls obj-*/lib/libopencv_*.a); do \
 		cp --verbose --preserve=mode $$f debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/; done
+
+	rm -rf debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/*_pch_dephelp.a
+	rm -rf debian/tmp/usr/share/OpenCV/doc/html/jquery.js
+
 	dh_install -O--buildsystem=cmake --list-missing
 
 override_dh_fixperms-indep:
 	dh_fixperms
 	#chmod 644 $(CURDIR)/debian/opencv-doc/usr/share/doc/opencv-doc/examples/python/*.py
 	#chmod 644 $(CURDIR)/debian/opencv-doc/usr/share/doc/opencv-doc/examples/python2/*.py
-
-override_dh_strip:
-	for p in libopencv-core3.0 libopencv-ml3.0 libopencv-imgproc3.0 \
-		libopencv-imgcodecs3.0 libopencv-video3.0 libopencv-videoio3.0 \
-		libopencv-objdetect3.0 libopencv-highgui3.0 \
-		libopencv-calib3d3.0 libopencv-flann3.0 \
-		libopencv-features2d3.0 \ libopencv-photo3.0 \
-		libopencv-videostab3.0 libopencv-stitching3.0 \
-		libopencv-shape3.0 libopencv-superres3.0 \
-		libopencv-viz3.0 libopencv-photo3.0 ; do \
-		dh_strip -p$$p --dbg-package=$$p-dbg ; done
-	dh_strip
