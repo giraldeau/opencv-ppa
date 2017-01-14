@@ -1,3 +1,9 @@
+opencv (3.1.0+dfsg-1~exp3~ppa2) xenial; urgency=medium
+
+  * Sync with upstream debian
+
+ -- Francis Giraldeau <francis.giraldeau@gmail.com>  Sat, 14 Jan 2017 10:29:16 -0500
+
 opencv (3.1.0+dfsg-1~exp2) experimental; urgency=medium
 
   * Fix Depends of libopencv-shape3.1 and libopencv-shape-dev.
